@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WB: Queen of Delivery 👑</title>
+    <style>
+        :root {
+            --wb-purple: #4a148c;
+            --wb-pink: #cb2d83;
+            --wb-light: #fdf5ff;
+            --glass: rgba(255, 255, 255, 0.95);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            margin: 0; padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background: var(--wb-light);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden; /* Запрещаем любой скролл во время игры */
+            position: fixed;
+        }
+
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 15% 25%, rgba(203, 45, 131, 0.1) 0%, transparent 40%),
+                        radial-gradient(circle at 85% 75%, rgba(74, 20, 140, 0.1) 0%, transparent 40%);
+            z-index: -1;
+        }
+
+        /* Игровой контейнер на весь экран */
+        #game-viewport {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 35px;
+            padding: 25px 20px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 20px 40px rgba(74, 20, 140, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* Коробки */
+        .box-item {
+            position: absolute;
+            font-size: 3.5rem;
+            z-index: 100;
+            touch-action: none;
+            will-change: transform;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px;
+            height: 80px;
+        }
+
+        /* Приятные слова */
+        .compliment {
+            position: fixed;
+            pointer-events: none;
+            z-index: 200;
+            color: var(--wb-pink);
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-shadow: 0 2px 10px white;
+            animation: riseFade 0.8s ease-out forwards;
+        }
+
+        @keyframes riseFade {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+            50% { opacity: 1; transform: translate(-50%, -40px) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -80px) scale(1); }
+        }
+
+        /* Интерфейс */
+        .hud {
+            position: fixed;
+            top: 40px;
+            left: 20px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .score-counter {
+            background: var(--wb-purple);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--wb-pink), var(--wb-purple));
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 20px;
+            width: 100%;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        /* Финал */
+        .final-screen {
+            display: none;
+            text-align: left;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .gif-box {
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .gif-box img { width: 100%; display: block; }
+
+        .advice-text {
+            background: #fff0f6;
+            border-left: 5px solid var(--wb-pink);
+            padding: 15px;
+            border-radius: 12px;
+            color: #2c003e;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .bonus-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .bonus-card {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            padding: 15px 5px;
+            text-align: center;
+        }
+
+        .bonus-card span { display: block; font-weight: 800; color: var(--wb-purple); font-size: 0.8rem; margin-top: 5px; }
+        .bonus-card .emoji { font-size: 2rem; }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer"></div>
+    
+    <div class="hud" id="hud">
+        <div class="score-counter" id="score-val">Принято: 0/15</div>
+    </div>
+
+    <div id="game-viewport">
+        <div class="main-card" id="ui-card">
+            
+            <div id="start-node">
+                <div class="gif-box">
+                    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExczlhb3k0YWFodHB1YTFka3Y5bm1kMGI5ZGtzOGZ3czVlZmIyeHFhbCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9Rjo1WLyS5LiOg1EdQ/giphy.gif">
+                </div>
+                <h2 style="color: var(--wb-purple); margin-bottom: 10px;">Приёмка открыта</h2>
+                <p style="color: #666; font-size: 0.95rem;">Нужно поймать 15 коробок. Не пропускай ни одной!</p>
+                <button class="btn" onclick="startApp()">Начать 🚀</button>
+            </div>
+
+            <div class="final-screen" id="end-node">
+                <h2 style="color: var(--wb-pink); text-align: center; margin-bottom: 15px;">Ты лучшая! ✨</h2>
+                <div class="gif-box">
+                    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWJ3ZzhsY2o5ZWx6NjBhdGpsMW45MHA3Y3M4eTBxaDA0dWZ3b2F6dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/bhPr2MgVRoL7wvlWTs/giphy.gif">
+                </div>
+                
+                <div class="advice-text">
+                    Я знаю ты заебалась на вбшке своей, но позволяй себе напиздеть на кого то что бы себя не напрягать так сильно.
+                </div>
+
+                <p style="text-align: center; font-weight: 800; color: var(--wb-purple); font-size: 0.85rem;">ВЫБИРАЙ БОНУС ЗА ТВОЙ ВЫИГРЫШ:</p>
+                
+                <div class="bonus-grid">
+                    <div class="bonus-card" onclick="alert('БК уже ждет!')">
+                        <div class="emoji">🍔</div><span>БК</span>
+                    </div>
+                    <div class="bonus-card" onclick="alert('Едем в Шашлыкофф!')">
+                        <div class="emoji">🥩</div><span>ШАШЛЫКОФФ</span>
+                    </div>
+                    <div class="bonus-card" onclick="alert('Кальянка забронирована!')">
+                        <div class="emoji">💨</div><span>КАЛЬЯНКА</span>
+                    </div>
+                    <div class="bonus-card" onclick="alert('Кино и попкорн!')">
+                        <div class="emoji">🍿</div><span>КИНО</span>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 20px; color: var(--wb-pink); font-weight: bold;">Люблю тебя! ❤️</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let isRunning = false;
+        const total = 15;
+        const compliments = ["Умничка!", "Красотка!", "Лучшая!", "В точку!", "Мощно!", "Шикарно!"];
+
+        function startApp() {
+            score = 0;
+            isRunning = true;
+            document.getElementById('start-node').style.display = 'none';
+            document.getElementById('ui-card').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!isRunning) return;
+            if (score < total) {
+                spawnBox();
+                let wait = Math.max(600, 1200 - (score * 50));
+                setTimeout(gameLoop, wait + Math.random() * 300);
+            }
+        }
+
+        function spawnBox() {
+            const box = document.createElement('div');
+            box.className = 'box-item';
+            box.innerHTML = '📦';
+            
+            // Расчет позиции, чтобы не выходило за экран телефона
+            const safeWidth = window.innerWidth - 80;
+            const x = Math.random() * safeWidth + 40;
+            box.style.left = x + 'px';
+            box.style.top = '-100px';
+            document.body.appendChild(box);
+
+            let currentTop = -100;
+            let speed = 4 + (score * 0.2);
+
+            let fall = setInterval(() => {
+                if (!isRunning) { clearInterval(fall); box.remove(); return; }
+                currentTop += speed;
+                box.style.top = currentTop + 'px';
+
+                if (currentTop > window.innerHeight) {
+                    clearInterval(fall);
+                    box.remove();
+                    gameOver();
+                }
+            }, 16);
+
+            const capture = (e) => {
+                e.preventDefault();
+                clearInterval(fall);
+                const rect = box.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top;
+                box.remove();
+                
+                score++;
+                document.getElementById('score-val').innerText = `Принято: ${score}/${total}`;
+                showWord(centerX, centerY);
+                
+                if (navigator.vibrate) navigator.vibrate(40);
+                if (score >= total) win();
+            };
+
+            box.addEventListener('touchstart', capture, {passive: false});
+            box.addEventListener('mousedown', capture);
+        }
+
+        function showWord(x, y) {
+            const w = document.createElement('div');
+            w.className = 'compliment';
+            w.innerText = compliments[Math.floor(Math.random() * compliments.length)];
+            w.style.left = x + 'px';
+            w.style.top = y + 'px';
+            document.body.appendChild(w);
+            setTimeout(() => w.remove(), 800);
+        }
+
+        function gameOver() {
+            isRunning = false;
+            alert("Пропустила коробку! Попробуй еще раз.");
+            location.reload();
+        }
+
+        function win() {
+            isRunning = false;
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('ui-card').style.display = 'block';
+            document.getElementById('end-node').style.display = 'block';
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+    </script>
+</body>
+</html>
